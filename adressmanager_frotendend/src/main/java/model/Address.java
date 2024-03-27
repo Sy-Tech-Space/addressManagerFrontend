@@ -17,6 +17,30 @@ public class Address implements Serializable {
         return id;
     }
 
+    @Override
+    public String toString() {
+        return "Address{" +
+                "id=" + id +
+                ", firstname='" + firstname + '\'' +
+                ", lastname='" + lastname + '\'' +
+                ", street='" + street + '\'' +
+                ", city='" + city + '\'' +
+                ", telNumber='" + telNumber + '\'' +
+                ", zip=" + zip +
+                '}';
+    }
+
+    public String toJsonString() {
+        return "{" +
+                "firstname:" + firstname  +
+                ",lastname:" + lastname  +
+                ",street:" + street  +
+                ",city:" + city  +
+                ",telNumber:" + telNumber +
+                ",zip:" + zip +
+                "}";
+    }
+
     public Address() {
 
     }
