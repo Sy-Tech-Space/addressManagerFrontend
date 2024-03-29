@@ -16,12 +16,18 @@ import java.util.Scanner;
 
 // this class will be used to connect with server
 public final class AddressConnector {
+    private static HttpURLConnection getConnection(String Url, String RequestMethod, boolean doOutPut) throws IOException {
+        URL obj = new URL(Url);
+        HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
+        conn.setRequestMethod(RequestMethod);
+        conn.setRequestProperty("Content-Type", "application/json"); // Optional, can be set based on server needs
+        conn.setRequestProperty("Accept", "application/json");
+        conn.setDoOutput(doOutPut);
+        return conn;
+    }
     public static JSONArray getAllAddresses() throws IOException {
         JSONArray jsonArray = new JSONArray();
-        URL obj = new URL(UrlsConstants.GET_ALL_URL);
-        HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Content-Type", "application/json"); // Optional, can be set based on server needs
+        HttpURLConnection conn = getConnection(UrlsConstants.GET_ALL_URL, "GET", false);
         int responseCode = conn.getResponseCode();
         System.out.println("Response Code: " + responseCode);
         if (responseCode == HttpURLConnection.HTTP_OK) { // Successful GET request
@@ -39,26 +45,54 @@ public final class AddressConnector {
         conn.disconnect();
         return jsonArray;
     }
-
-
-
+    public static String deleteAddress(Address address) throws IOException {
+        HttpURLConnection conn = getConnection(UrlsConstants.DELETE_ID_URL + address.getId(), "DELETE", false);
+        return perform(conn);
+    }
+    public static String deleteAllAddresses() throws IOException {
+        HttpURLConnection conn = getConnection(UrlsConstants.DELETE_ALL_URL, "DELETE", false);
+        return perform(conn);
+    }
     public static String saveAddress(Address address) throws IOException {
+        HttpURLConnection conn = getConnection(UrlsConstants.SAVE_URL, "POST", true);
+        return perform(address, conn);
+    }
+
+    public static String updateAddress(Address address) throws IOException {
+        HttpURLConnection conn = getConnection(UrlsConstants.UPDATE_URL + address.getId(), "PUT", true);
+        return perform(address, conn);
+    }
+    private static String perform(HttpURLConnection conn) throws IOException {
         StringBuilder response = new StringBuilder();
-        URL obj = new URL(UrlsConstants.SAVE_URL);
-        HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/json"); // Optional, can be set based on server needs
-        conn.setRequestProperty("Accept", "application/json");
-        conn.setDoOutput(true);
-        JSONObject jsonObject =  convertAddressToJson(address);
-        try(OutputStream os = conn.getOutputStream()) {
-            byte[] input = jsonObject.toString() .getBytes(StandardCharsets.UTF_8);
+        int responseCode = conn.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+        if (responseCode == HttpURLConnection.HTTP_OK) { // Successful  request
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+                System.out.println(response);
+            }
+        } else {
+            System.out.println("GET request failed!");
+        }
+        conn.disconnect();
+        return response.toString();
+    }
+
+    private static String perform(Address address, HttpURLConnection conn) throws IOException {
+        StringBuilder response = new StringBuilder();
+        JSONObject jsonObject = convertAddressToJson(address);
+        try (OutputStream os = conn.getOutputStream()) {
+            byte[] input = jsonObject.toString().getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
         int responseCode = conn.getResponseCode();
         System.out.println("Response Code: " + responseCode);
-        if (responseCode == HttpURLConnection.HTTP_OK) { // Successful GET request
-            try(BufferedReader br = new BufferedReader(
+        if (responseCode == HttpURLConnection.HTTP_OK) { // Successful request
+            try (BufferedReader br = new BufferedReader(
                     new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
                 String responseLine;
                 while ((responseLine = br.readLine()) != null) {
@@ -67,59 +101,7 @@ public final class AddressConnector {
                 System.out.println(response);
             }
         } else {
-            System.out.println("GET request failed!");
-        }
-        conn.disconnect();
-        return response.toString();
-    }
-
-
-    public static String deleteAddress(Address address) throws IOException {
-        StringBuilder response = new StringBuilder();
-        URL obj = new URL(UrlsConstants.DELETE_ID_URL+ address.getId());
-        HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
-        conn.setRequestMethod("DELETE");
-        conn.setRequestProperty("Content-Type", "application/json"); // Optional, can be set based on server needs
-        conn.setRequestProperty("Accept", "application/json");
-        int responseCode = conn.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-        if (responseCode == HttpURLConnection.HTTP_OK) { // Successful GET request
-            try(BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-                System.out.println(response);
-            }
-        } else {
-            System.out.println("GET request failed!");
-        }
-        conn.disconnect();
-        return response.toString();
-    }
-
-
-    public static String deleteAllAddresses() throws IOException {
-        StringBuilder response = new StringBuilder();
-        URL obj = new URL(UrlsConstants.DELETE_ALL_URL);
-        HttpURLConnection conn = (HttpURLConnection) obj.openConnection();
-        conn.setRequestMethod("DELETE");
-        conn.setRequestProperty("Content-Type", "application/json"); // Optional, can be set based on server needs
-        conn.setRequestProperty("Accept", "application/json");
-        int responseCode = conn.getResponseCode();
-        System.out.println("Response Code: " + responseCode);
-        if (responseCode == HttpURLConnection.HTTP_OK) { // Successful GET request
-            try(BufferedReader br = new BufferedReader(
-                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
-                String responseLine;
-                while ((responseLine = br.readLine()) != null) {
-                    response.append(responseLine.trim());
-                }
-                System.out.println(response);
-            }
-        } else {
-            System.out.println("GET request failed!");
+            System.out.println("request failed!");
         }
         conn.disconnect();
         return response.toString();
@@ -130,12 +112,13 @@ public final class AddressConnector {
         return new JSONObject(address.toJsonString());
     }
 
-
-
     public static void main(String[] args) {
-      Address address =   UrlsConstants.getAddressExample();
+        Address address = UrlsConstants.getAddressExample();
+        address.setId(1);
         try {
-            AddressConnector.saveAddress(address);
+          //  AddressConnector.saveAddress(address);
+            String arr =       AddressConnector.updateAddress(address);
+            System.out.println(arr);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

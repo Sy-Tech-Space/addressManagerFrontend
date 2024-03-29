@@ -9,7 +9,8 @@ public class UrlsConstants {
     // POST Method
     public final static String SAVE_URL = "http://localhost:8080/api/v1/address/save";
 
-    public final static String UPDATE_URL = "";
+    // PUT Method with /idNumber
+    public final static String UPDATE_URL = "http://localhost:8080/api/v1/address/update/";
 
     // DELETE Method
     public final static String DELETE_ALL_URL = "http://localhost:8080/api/v1/address/delete";
